@@ -1,0 +1,82 @@
+version: '3.5'
+services:
+    nginx:
+      image: ${COMPOSE_PROJECT_NAME}-nginx:latest
+      build:
+        context: ./.docker/
+        dockerfile: ./nginx/Dockerfile
+        args:
+          BUILD_ARGUMENT_ENV: prod
+      container_name: ${COMPOSE_PROJECT_NAME}-nginx
+      restart: always
+      ports:
+        - "${WEB_PORT_HTTP}:80"
+        - "${WEB_PORT_HTTPS}:443"
+      volumes:
+        - ./:/var/www/html:ro,cached
+      depends_on:
+        - laravel
+      networks:
+        - laravel
+    laravel: &laravel-template
+      image: ${COMPOSE_PROJECT_NAME}-laravel:latest
+      build:
+        context: .
+        dockerfile: ./.docker/Dockerfile
+        args:
+          BUILD_ARGUMENT_ENV: prod
+          HOST_UID: ${HOST_UID}
+          HOST_GID: ${HOST_GID}
+      container_name: ${COMPOSE_PROJECT_NAME}-laravel
+      volumes:
+        - ./:/var/www/html:cached
+      restart: always
+      depends_on:
+        - mysql
+      networks:
+        - laravel
+    supervisord:
+      <<: *laravel-template
+      container_name: ${COMPOSE_PROJECT_NAME}-supervisord
+      expose: []
+      ports:
+        - "6001:6001"
+      command: ["/usr/bin/supervisord"]
+    mysql:
+      image: mysql:8.0
+      container_name: ${COMPOSE_PROJECT_NAME}-mysql
+      command: --default-authentication-plugin=mysql_native_password --innodb-use-native-aio=${INNODB_USE_NATIVE_AIO:-1}
+      environment:
+        MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+        MYSQL_ROOT_HOST: '%'
+        MYSQL_DATABASE: '${DB_DATABASE}'
+        MYSQL_USER: '${DB_USERNAME}'
+        MYSQL_PASSWORD: '${DB_PASSWORD}'
+      ports:
+        - "${DB_PORT:-3306}:3306"
+      volumes:
+        - ./storage/mysql-data:/var/lib/mysql:delegated
+        - ./.docker/dev/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+      networks:
+        - laravel
+    redis:
+      image: redis:alpine
+      container_name: ${COMPOSE_PROJECT_NAME}-redis
+      restart: unless-stopped
+      ports:
+        - "${REDIS_PORT:-6379}:6379"
+      volumes:
+        - './storage/redis-data:/var/lib/redis:delegated'
+      command: redis-server --appendonly yes --replica-read-only no
+      networks:
+        - laravel
+      healthcheck:
+        test:
+          - CMD
+          - redis-cli
+          - ping
+        retries: 3
+        timeout: 5s
+networks:
+  laravel:
+    name: laravel

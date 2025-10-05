@@ -26,3 +26,7 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+/.docker/general/ssl/cert.pem
+/.docker/general/ssl/key.pem
+/storage/mysql-data
+/srorage/redis-data
