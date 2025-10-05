@@ -30,3 +30,5 @@ yarn-error.log
 /.docker/general/ssl/key.pem
 /storage/mysql-data
 /srorage/redis-data
+package-lock.json
+composer.lock
