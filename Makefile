@@ -148,13 +148,10 @@ npm-install: ## Install NPM dependencies
 	@make exec-by-root cmd="npm install"
 
 npm-run-prod: ## Run NPM build production
-	@make exec-by-root cmd="npm run prod"
+	@make exec-by-root cmd="npm run build"
 
 npm-run-dev: ## Run NPM build development
 	@make exec-by-root cmd="npm run dev"
-
-npm-run-watch: ## Run NPM watch
-	@make exec-by-root cmd="npm run watch"
 
 composer-install-no-dev: ## Installs composer no-dev dependencies
 	@make exec-bash cmd="COMPOSER_MEMORY_LIMIT=-1 composer install --optimize-autoloader --no-dev"
