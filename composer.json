@@ -1,24 +1,47 @@
 {
     "name": "itcompass/basepack",
     "description": "DevOps toolkit for Laravel projects with Docker, Make commands, and development environment setup",
-    "keywords": ["laravel", "docker", "devops", "development", "make", "php", "nginx", "mysql"],
+    "keywords": [
+        "laravel",
+        "docker",
+        "devops",
+        "development",
+        "make",
+        "php",
+        "nginx",
+        "mysql",
+        "redis",
+        "ssl",
+        "environment",
+        "toolkit",
+        "automation"
+    ],
     "type": "library",
     "license": "MIT",
     "homepage": "https://github.com/itcompass-agency/basepack",
+    "support": {
+        "issues": "https://github.com/itcompass-agency/basepack/issues",
+        "source": "https://github.com/itcompass-agency/basepack",
+        "docs": "https://github.com/itcompass-agency/basepack/wiki"
+    },
     "authors": [
         {
             "name": "ITCompass Agency",
-            "email": "info@itcompass.agency"
+            "email": "info@itcompass.agency",
+            "homepage": "https://itcompass.agency",
+            "role": "Developer"
         }
     ],
     "require": {
-        "php": "^8.2",
+        "php": "^8.1|^8.2|^8.3",
         "illuminate/support": "^10.0|^11.0|^12.0",
-        "illuminate/console": "^10.0|^11.0|^12.0"
+        "illuminate/console": "^10.0|^11.0|^12.0",
+        "symfony/process": "^6.0|^7.0"
     },
     "require-dev": {
         "phpunit/phpunit": "^10.0|^11.0",
-        "orchestra/testbench": "^8.0|^9.0"
+        "orchestra/testbench": "^8.0|^9.0",
+        "mockery/mockery": "^1.6"
     },
     "autoload": {
         "psr-4": {
@@ -35,14 +58,24 @@
             "providers": [
                 "ITCompass\\BasePack\\BasePackServiceProvider"
             ]
+        },
+        "branch-alias": {
+            "dev-main": "1.0-dev"
         }
     },
     "scripts": {
-        "test": "vendor/bin/phpunit"
+        "test": "vendor/bin/phpunit",
+        "test-coverage": "vendor/bin/phpunit --coverage-html coverage",
+        "format": "vendor/bin/php-cs-fixer fix --allow-risky=yes"
     },
     "config": {
-        "sort-packages": true
+        "sort-packages": true,
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "allow-plugins": {
+            "composer/package-versions-deprecated": true
+        }
     },
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
     "prefer-stable": true
 }
