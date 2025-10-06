@@ -46,13 +46,13 @@ services:
   nginx:
     container_name: {{PROJECT_NAME}}-nginx
     build:
-      context: ./.docker/nginx
-      dockerfile: Dockerfile
+      context: ./.docker
+      dockerfile: ./nginx/Dockerfile
       args:
         BUILD_ARGUMENT_ENV: dev
     ports:
-      - "${WEB_PORT_HTTP}:80"
-      - "${WEB_PORT_SSL}:443"
+      - "${WEB_PORT_HTTP:-80}:80"
+      - "${WEB_PORT_SSL:-443}:443"
     volumes:
       - ./:/var/www/html:cached
     depends_on:
@@ -64,13 +64,13 @@ services:
     container_name: {{PROJECT_NAME}}-mysql
     image: mysql:8.0
     ports:
-      - "${DB_OUTER_PORT}:3306"
+      - "${DB_OUTER_PORT:-3306}:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-      MYSQL_DATABASE: ${DB_DATABASE}
-      MYSQL_USER: ${DB_USERNAME}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-      MYSQL_INNODB_USE_NATIVE_AIO: ${INNODB_USE_NATIVE_AIO}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_DATABASE: ${DB_DATABASE:-laravel}
+      MYSQL_USER: ${DB_USERNAME:-laravel}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_INNODB_USE_NATIVE_AIO: ${INNODB_USE_NATIVE_AIO:-1}
     volumes:
       - {{PROJECT_NAME}}-mysql-data:/var/lib/mysql
       - ./.docker/dev/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
@@ -82,7 +82,7 @@ services:
     container_name: {{PROJECT_NAME}}-redis
     image: redis:alpine
     ports:
-      - "${REDIS_OUTER_PORT}:6379"
+      - "${REDIS_OUTER_PORT:-6379}:6379"
     networks:
       - {{PROJECT_NAME}}
     volumes:

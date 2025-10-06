@@ -1,0 +1,7 @@
+# This directory should contain SSL certificates
+# Files needed:
+# - cert.pem (SSL certificate)
+# - key.pem (Private key)
+# 
+# These files are not included in the package for security reasons.
+# Please provide your own SSL certificates.

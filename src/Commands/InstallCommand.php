@@ -42,6 +42,9 @@ class InstallCommand extends Command
             return Command::FAILURE;
         }
 
+        // Create .env.docker first to avoid Docker warnings
+        $this->createDockerEnv($force);
+
         // Copy Docker files
         $this->publishDockerFiles($force);
         
@@ -50,9 +53,6 @@ class InstallCommand extends Command
         
         // Copy docker-compose files
         $this->publishDockerCompose($environment, $force);
-        
-        // Create .env.docker if not exists
-        $this->createDockerEnv($force);
         
         // Update .gitignore
         $this->updateGitignore();
@@ -223,25 +223,34 @@ class InstallCommand extends Command
             File::makeDirectory($destination, 0755, true);
         }
         
-        $items = File::allFiles($source);
+        // Use recursive iterator to properly handle directory structure
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($source, \RecursiveDirectoryIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST
+        );
         
-        foreach ($items as $item) {
-            $relativePath = str_replace($source . '/', '', $item->getPathname());
+        foreach ($iterator as $item) {
+            $relativePath = str_replace($source . DIRECTORY_SEPARATOR, '', $item->getPathname());
             
             // Skip SSL certificate stub files
-            if (strpos($relativePath, 'general/ssl/cert.pem') !== false ||
-                strpos($relativePath, 'general/ssl/key.pem') !== false) {
+            if (strpos($relativePath, 'general' . DIRECTORY_SEPARATOR . 'ssl' . DIRECTORY_SEPARATOR . 'cert.pem') !== false ||
+                strpos($relativePath, 'general' . DIRECTORY_SEPARATOR . 'ssl' . DIRECTORY_SEPARATOR . 'key.pem') !== false) {
                 continue;
             }
             
-            $targetPath = $destination . '/' . $relativePath;
-            $targetDir = dirname($targetPath);
+            $targetPath = $destination . DIRECTORY_SEPARATOR . $relativePath;
             
-            if (!File::exists($targetDir)) {
-                File::makeDirectory($targetDir, 0755, true);
+            if ($item->isDir()) {
+                if (!File::exists($targetPath)) {
+                    File::makeDirectory($targetPath, 0755, true);
+                }
+            } else {
+                $targetDir = dirname($targetPath);
+                if (!File::exists($targetDir)) {
+                    File::makeDirectory($targetDir, 0755, true);
+                }
+                File::copy($item->getPathname(), $targetPath);
             }
-            
-            File::copy($item->getPathname(), $targetPath);
         }
     }
 
@@ -331,6 +340,7 @@ class InstallCommand extends Command
     {
         $envExample = base_path('.env.example');
         $envDocker = base_path('.env.docker');
+        $env = base_path('.env');
         
         if (File::exists($envDocker) && !$force) {
             return;
@@ -346,6 +356,12 @@ class InstallCommand extends Command
 
         // Update values for Docker environment
         $this->updateEnvFile($envDocker);
+        
+        // If no .env file exists, create one from .env.docker
+        if (!File::exists($env)) {
+            File::copy($envDocker, $env);
+            $this->info('.env file created from .env.docker');
+        }
         
         $this->info('.env.docker file created successfully.');
     }
