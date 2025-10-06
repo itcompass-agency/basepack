@@ -9,6 +9,7 @@ use ITCompass\BasePack\Commands\PublishCommand;
 use ITCompass\BasePack\Commands\StatusCommand;
 use ITCompass\BasePack\Commands\ExecCommand;
 use ITCompass\BasePack\Commands\SslCheckCommand;
+use ITCompass\BasePack\Commands\DiagnoseCommand;
 
 class BasePackServiceProvider extends ServiceProvider
 {
@@ -80,6 +81,7 @@ class BasePackServiceProvider extends ServiceProvider
             StatusCommand::class,
             ExecCommand::class,
             SslCheckCommand::class,
+            DiagnoseCommand::class,
         ]);
     }
 }

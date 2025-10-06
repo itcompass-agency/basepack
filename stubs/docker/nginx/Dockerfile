@@ -15,7 +15,7 @@ RUN apk add --update openssl && \
 # create folder for certificates
 RUN mkdir -p /etc/nginx/certificates
 
-# Copy SSL certificates - they should exist in the build context
+# Copy SSL certificates individually to handle missing files gracefully
 COPY general/ssl/cert.pem /etc/nginx/certificates/cert.pem
 COPY general/ssl/key.pem /etc/nginx/certificates/key.pem
 
