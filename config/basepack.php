@@ -10,7 +10,7 @@ return [
     |
     */
 
-    'project_name' => env('BASEPACK_PROJECT_NAME', env('APP_NAME', 'laravel')),
+    'project_name' => env('BASEPACK_PROJECT_NAME', env('APP_NAME', 'basepack')),
     
     'docker' => [
         'php_version' => env('BASEPACK_PHP_VERSION', '8.3'),

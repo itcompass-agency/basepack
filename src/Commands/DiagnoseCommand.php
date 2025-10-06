@@ -4,9 +4,12 @@ namespace ITCompass\BasePack\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
+use ITCompass\BasePack\Traits\DisplaysLogo;
 
 class DiagnoseCommand extends Command
 {
+    use DisplaysLogo;
+
     protected $signature = 'basepack:diagnose 
                             {--fix : Attempt to fix common issues}';
 
@@ -15,17 +18,25 @@ class DiagnoseCommand extends Command
     protected $errors = [];
     protected $warnings = [];
     protected $success = [];
+    protected $projectName = null;
 
     public function handle(): int
     {
+        // Display logo
+        $this->displayLogo();
+        
         $this->info('🔍 Diagnosing BasePack installation...');
         $this->newLine();
+
+        // Detect project name
+        $this->detectProjectName();
 
         $this->checkDockerStructure();
         $this->checkEnvironmentFiles();
         $this->checkSSLCertificates();
         $this->checkDockerCompose();
         $this->checkMakefile();
+        $this->checkProjectConfiguration();
 
         if ($this->option('fix')) {
             $this->attemptFixes();
@@ -34,6 +45,68 @@ class DiagnoseCommand extends Command
         $this->displayResults();
 
         return empty($this->errors) ? Command::SUCCESS : Command::FAILURE;
+    }
+
+    protected function detectProjectName(): void
+    {
+        // Try to get from environment
+        if (File::exists(base_path('.env'))) {
+            $env = File::get(base_path('.env'));
+            if (preg_match('/^COMPOSE_PROJECT_NAME=(.*)$/m', $env, $matches)) {
+                $this->projectName = trim($matches[1]);
+            }
+        }
+
+        // Try to get from Makefile
+        if (!$this->projectName && File::exists(base_path('Makefile'))) {
+            $makefile = File::get(base_path('Makefile'));
+            if (preg_match('/^export COMPOSE_PROJECT_NAME=(.*)$/m', $makefile, $matches)) {
+                $this->projectName = trim($matches[1]);
+            }
+        }
+
+        // Try to detect from SSL certificate
+        if (!$this->projectName) {
+            $sslPath = base_path('.docker/general/ssl/cert.pem');
+            if (File::exists($sslPath)) {
+                $output = shell_exec("openssl x509 -in {$sslPath} -noout -subject 2>/dev/null");
+                if ($output && preg_match('/CN\s*=\s*([^\s,\/]+)/', $output, $matches)) {
+                    $domain = $matches[1];
+                    if ($domain !== 'localhost') {
+                        $parts = explode('.', $domain);
+                        if (count($parts) >= 2) {
+                            array_pop($parts); // Remove TLD
+                            $this->projectName = implode('_', $parts) . '_basepack';
+                        }
+                    }
+                }
+            }
+        }
+
+        // Default
+        if (!$this->projectName) {
+            $this->projectName = 'basepack';
+        }
+    }
+
+    protected function checkProjectConfiguration(): void
+    {
+        $this->info('📦 Project Configuration:');
+        $this->line('  Project Name: ' . $this->projectName);
+        
+        // Check if containers are running
+        $runningContainers = shell_exec("docker ps --filter 'name={$this->projectName}' --format '{{.Names}}'");
+        if ($runningContainers) {
+            $containers = explode("\n", trim($runningContainers));
+            $this->success[] = "✅ Found " . count($containers) . " running container(s) for project: {$this->projectName}";
+            foreach ($containers as $container) {
+                if (!empty($container)) {
+                    $this->line('    • ' . $container);
+                }
+            }
+        } else {
+            $this->warnings[] = "⚠️  No running containers found for project: {$this->projectName}";
+        }
     }
 
     protected function checkDockerStructure(): void
@@ -68,12 +141,63 @@ class DiagnoseCommand extends Command
         if (File::exists($sslPath)) {
             if (File::exists($sslPath . '/cert.pem') && File::exists($sslPath . '/key.pem')) {
                 $this->success[] = "✅ SSL certificates found in Docker directory";
+                
+                // Check certificate details
+                $certInfo = $this->getCertificateInfo($sslPath . '/cert.pem');
+                if ($certInfo) {
+                    $this->line('  Certificate Details:');
+                    foreach ($certInfo as $key => $value) {
+                        $this->line("    • {$key}: {$value}");
+                    }
+                }
             } else {
                 $this->warnings[] = "⚠️  SSL directory exists but certificates missing";
             }
         } else {
             $this->errors[] = "❌ SSL directory missing: .docker/general/ssl/";
         }
+    }
+
+    protected function getCertificateInfo(string $certPath): ?array
+    {
+        if (!File::exists($certPath)) {
+            return null;
+        }
+
+        $output = shell_exec("openssl x509 -in {$certPath} -noout -subject -dates 2>/dev/null");
+        
+        if (!$output) {
+            return null;
+        }
+
+        $info = [];
+        
+        // Extract domain/CN
+        if (preg_match('/CN\s*=\s*([^\s,\/]+)/', $output, $matches)) {
+            $info['Domain'] = $matches[1];
+        }
+        
+        // Extract validity dates
+        if (preg_match('/notBefore=(.+)/', $output, $matches)) {
+            $info['Valid from'] = date('Y-m-d', strtotime($matches[1]));
+        }
+        
+        if (preg_match('/notAfter=(.+)/', $output, $matches)) {
+            $notAfter = strtotime($matches[1]);
+            $info['Valid until'] = date('Y-m-d', $notAfter);
+            
+            // Check if expired or expiring soon
+            $daysLeft = ($notAfter - time()) / (60 * 60 * 24);
+            if ($daysLeft < 0) {
+                $info['Status'] = '❌ EXPIRED';
+            } elseif ($daysLeft < 30) {
+                $info['Status'] = '⚠️  Expiring soon (' . round($daysLeft) . ' days)';
+            } else {
+                $info['Status'] = '✅ Valid (' . round($daysLeft) . ' days remaining)';
+            }
+        }
+        
+        return $info;
     }
 
     protected function checkEnvironmentFiles(): void
@@ -100,6 +224,7 @@ class DiagnoseCommand extends Command
                     'REDIS_OUTER_PORT',
                     'WEB_PORT_HTTP',
                     'WEB_PORT_SSL',
+                    'COMPOSE_PROJECT_NAME',
                 ];
 
                 $missingVars = [];
@@ -153,6 +278,12 @@ class DiagnoseCommand extends Command
         foreach ($composeFiles as $file => $description) {
             if (File::exists(base_path($file))) {
                 $this->success[] = "✅ {$description} exists";
+                
+                // Check if project name is correctly set
+                $content = File::get(base_path($file));
+                if (!str_contains($content, $this->projectName)) {
+                    $this->warnings[] = "⚠️  {$file} may have incorrect project name";
+                }
             } else {
                 $this->warnings[] = "⚠️  Missing: {$description}";
             }
@@ -163,6 +294,12 @@ class DiagnoseCommand extends Command
     {
         if (File::exists(base_path('Makefile'))) {
             $this->success[] = "✅ Makefile exists";
+            
+            // Check project name in Makefile
+            $content = File::get(base_path('Makefile'));
+            if (!str_contains($content, "COMPOSE_PROJECT_NAME={$this->projectName}")) {
+                $this->warnings[] = "⚠️  Makefile may have incorrect project name";
+            }
         } else {
             $this->errors[] = "❌ Missing: Makefile";
         }
@@ -205,6 +342,40 @@ class DiagnoseCommand extends Command
                 }
             }
         }
+
+        // Fix project name consistency
+        $this->fixProjectNameConsistency();
+    }
+
+    protected function fixProjectNameConsistency(): void
+    {
+        $updated = false;
+        
+        // Update .env file
+        if (File::exists(base_path('.env'))) {
+            $env = File::get(base_path('.env'));
+            if (!preg_match('/^COMPOSE_PROJECT_NAME=/m', $env)) {
+                $env .= "\nCOMPOSE_PROJECT_NAME={$this->projectName}\n";
+                File::put(base_path('.env'), $env);
+                $updated = true;
+            }
+        }
+
+        // Update Makefile
+        if (File::exists(base_path('Makefile'))) {
+            $makefile = File::get(base_path('Makefile'));
+            $makefile = preg_replace(
+                '/^export COMPOSE_PROJECT_NAME=.*$/m',
+                "export COMPOSE_PROJECT_NAME={$this->projectName}",
+                $makefile
+            );
+            File::put(base_path('Makefile'), $makefile);
+            $updated = true;
+        }
+
+        if ($updated) {
+            $this->info("Fixed: Updated project name to '{$this->projectName}' across configuration files");
+        }
     }
 
     protected function fixEnvironmentVariables(): void
@@ -230,6 +401,7 @@ class DiagnoseCommand extends Command
             'WEB_PORT_SSL' => '443',
             'XDEBUG_CONFIG' => 'main',
             'INNODB_USE_NATIVE_AIO' => '1',
+            'COMPOSE_PROJECT_NAME' => $this->projectName,
         ];
 
         foreach ($defaults as $key => $value) {
@@ -293,10 +465,14 @@ class DiagnoseCommand extends Command
         }
 
         // Summary
-        $this->line('📊 Summary:');
-        $this->line("  ✅ Success: " . count($this->success));
-        $this->line("  ⚠️  Warnings: " . count($this->warnings));
-        $this->line("  ❌ Errors: " . count($this->errors));
+        $this->line('╔════════════════════════════════════════════════════════════════╗');
+        $this->line('║                      📊 Diagnosis Summary                      ║');
+        $this->line('╠════════════════════════════════════════════════════════════════╣');
+        $this->line('║  Project: ' . str_pad($this->projectName, 53) . '║');
+        $this->line('║  ✅ Success:  ' . str_pad(count($this->success) . ' checks passed', 49) . '║');
+        $this->line('║  ⚠️  Warnings: ' . str_pad(count($this->warnings) . ' issues found', 49) . '║');
+        $this->line('║  ❌ Errors:   ' . str_pad(count($this->errors) . ' critical issues', 49) . '║');
+        $this->line('╚════════════════════════════════════════════════════════════════╝');
 
         if (empty($this->errors)) {
             $this->newLine();
