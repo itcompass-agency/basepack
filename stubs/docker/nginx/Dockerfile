@@ -15,12 +15,22 @@ RUN apk add --update openssl && \
 # create folder for certificates
 RUN mkdir -p /etc/nginx/certificates
 
-# generate certificates
-# TODO: change it and make additional logic for production environment
-# RUN openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/nginx/certificates/key.pem -out /etc/nginx/certificates/cert.pem -subj "/C=AT/ST=Vienna/L=Vienna/O=Security/OU=Development/CN=pantheon.business"
+# Copy SSL certificates if they exist
+# These will be copied from the host machine during docker build
+# The build context should include the certificates
+COPY ./general/ssl/ /etc/nginx/certificates/
 
-COPY ./general/ssl/key.pem /etc/nginx/certificates/key.pem
-COPY ./general/ssl/cert.pem /etc/nginx/certificates/cert.pem
-
-# put nginx config
+# Put nginx config
 COPY ./$BUILD_ARGUMENT_ENV/nginx.conf /etc/nginx/conf.d/default.conf
+
+# Create a startup script to check for certificates
+RUN echo '#!/bin/sh' > /docker-entrypoint.sh && \
+    echo 'if [ ! -f /etc/nginx/certificates/cert.pem ] || [ ! -f /etc/nginx/certificates/key.pem ]; then' >> /docker-entrypoint.sh && \
+    echo '    echo "ERROR: SSL certificates not found!"' >> /docker-entrypoint.sh && \
+    echo '    echo "Please ensure cert.pem and key.pem are in .docker/general/ssl/"' >> /docker-entrypoint.sh && \
+    echo '    exit 1' >> /docker-entrypoint.sh && \
+    echo 'fi' >> /docker-entrypoint.sh && \
+    echo 'exec nginx -g "daemon off;"' >> /docker-entrypoint.sh && \
+    chmod +x /docker-entrypoint.sh
+
+ENTRYPOINT ["/docker-entrypoint.sh"]

@@ -8,6 +8,7 @@ use ITCompass\BasePack\Commands\BuildCommand;
 use ITCompass\BasePack\Commands\PublishCommand;
 use ITCompass\BasePack\Commands\StatusCommand;
 use ITCompass\BasePack\Commands\ExecCommand;
+use ITCompass\BasePack\Commands\SslCheckCommand;
 
 class BasePackServiceProvider extends ServiceProvider
 {
@@ -42,10 +43,13 @@ class BasePackServiceProvider extends ServiceProvider
             __DIR__.'/../config/basepack.php' => config_path('basepack.php'),
         ], ['basepack-config', 'basepack']);
 
-        // Publish Docker files
+        // Publish Docker files (without SSL stubs)
         $this->publishes([
             __DIR__.'/../stubs/docker' => base_path('.docker'),
-        ], ['basepack-docker', 'basepack']);
+        ], ['basepack-docker', 'basepack'], function($source, $destination) {
+            // Skip SSL certificate stubs during publishing
+            return !str_contains($source, '/ssl/cert.pem') && !str_contains($source, '/ssl/key.pem');
+        });
 
         // Publish Makefile
         $this->publishes([
@@ -75,6 +79,7 @@ class BasePackServiceProvider extends ServiceProvider
             PublishCommand::class,
             StatusCommand::class,
             ExecCommand::class,
+            SslCheckCommand::class,
         ]);
     }
 }
