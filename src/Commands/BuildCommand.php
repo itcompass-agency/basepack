@@ -1,0 +1,50 @@
+<?php
+
+namespace ITCompass\BasePack\Commands;
+
+use Illuminate\Console\Command;
+use Symfony\Component\Process\Process;
+
+class BuildCommand extends Command
+{
+    protected $signature = 'basepack:build 
+                            {--env=dev : Environment to build (dev/prod)}
+                            {--no-cache : Build without cache}';
+
+    protected $description = 'Build Docker containers for the project';
+
+    public function handle(): int
+    {
+        $environment = $this->option('env');
+        $noCache = $this->option('no-cache');
+
+        if (!in_array($environment, ['dev', 'prod'])) {
+            $this->error('Invalid environment. Use dev or prod.');
+            return Command::FAILURE;
+        }
+
+        $this->info("Building {$environment} environment...");
+
+        $command = $environment === 'dev' ? 'make build' : 'make build-prod';
+        
+        if ($noCache) {
+            $command .= ' DOCKER_BUILD_ARGS="--no-cache"';
+        }
+
+        $process = Process::fromShellCommandline($command);
+        $process->setTty(true);
+        $process->setTimeout(600);
+        
+        $process->run(function ($type, $buffer) {
+            $this->output->write($buffer);
+        });
+
+        if (!$process->isSuccessful()) {
+            $this->error('Build failed!');
+            return Command::FAILURE;
+        }
+
+        $this->info('Build completed successfully!');
+        return Command::SUCCESS;
+    }
+}

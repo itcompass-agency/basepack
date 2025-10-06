@@ -1,0 +1,95 @@
+version: '3.8'
+
+networks:
+  {{PROJECT_NAME}}:
+    driver: bridge
+
+services:
+  laravel:
+    container_name: {{PROJECT_NAME}}-laravel
+    build:
+      context: .
+      dockerfile: ./.docker/Dockerfile
+      args:
+        BUILD_ARGUMENT_ENV: dev
+        HOST_UID: ${HOST_UID}
+        HOST_GID: ${HOST_GID}
+        XDEBUG_CONFIG: ${XDEBUG_CONFIG}
+    volumes:
+      - ./:/var/www/html:cached
+    networks:
+      - {{PROJECT_NAME}}
+    depends_on:
+      - mysql
+      - redis
+    environment:
+      INSIDE_DOCKER_CONTAINER: 1
+
+  supervisord:
+    container_name: {{PROJECT_NAME}}-supervisord
+    build:
+      context: .
+      dockerfile: ./.docker/Dockerfile
+      args:
+        BUILD_ARGUMENT_ENV: dev
+        HOST_UID: ${HOST_UID}
+        HOST_GID: ${HOST_GID}
+        XDEBUG_CONFIG: ${XDEBUG_CONFIG}
+    volumes:
+      - ./:/var/www/html:cached
+    networks:
+      - {{PROJECT_NAME}}
+    depends_on:
+      - laravel
+    command: ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+
+  nginx:
+    container_name: {{PROJECT_NAME}}-nginx
+    build:
+      context: ./.docker/nginx
+      dockerfile: Dockerfile
+      args:
+        BUILD_ARGUMENT_ENV: dev
+    ports:
+      - "${WEB_PORT_HTTP}:80"
+      - "${WEB_PORT_SSL}:443"
+    volumes:
+      - ./:/var/www/html:cached
+    depends_on:
+      - laravel
+    networks:
+      - {{PROJECT_NAME}}
+
+  mysql:
+    container_name: {{PROJECT_NAME}}-mysql
+    image: mysql:8.0
+    ports:
+      - "${DB_OUTER_PORT}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_INNODB_USE_NATIVE_AIO: ${INNODB_USE_NATIVE_AIO}
+    volumes:
+      - {{PROJECT_NAME}}-mysql-data:/var/lib/mysql
+      - ./.docker/dev/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - {{PROJECT_NAME}}
+    command: --default-authentication-plugin=mysql_native_password
+
+  redis:
+    container_name: {{PROJECT_NAME}}-redis
+    image: redis:alpine
+    ports:
+      - "${REDIS_OUTER_PORT}:6379"
+    networks:
+      - {{PROJECT_NAME}}
+    volumes:
+      - {{PROJECT_NAME}}-redis-data:/data
+
+volumes:
+  {{PROJECT_NAME}}-mysql-data:
+    driver: local
+  {{PROJECT_NAME}}-redis-data:
+    driver: local
