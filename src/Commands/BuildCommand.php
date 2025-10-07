@@ -18,18 +18,18 @@ class BuildCommand extends Command
         $environment = $this->option('env');
         $noCache = $this->option('no-cache');
 
-        if (!in_array($environment, ['dev', 'prod'])) {
+        if(!in_array($environment, ['dev', 'prod'])):
             $this->error('Invalid environment. Use dev or prod.');
             return Command::FAILURE;
-        }
+        endif;
 
         $this->info("Building {$environment} environment...");
 
         $command = $environment === 'dev' ? 'make build' : 'make build-prod';
         
-        if ($noCache) {
+        if($noCache):
             $command .= ' DOCKER_BUILD_ARGS="--no-cache"';
-        }
+        endif;
 
         $process = Process::fromShellCommandline($command);
         $process->setTty(true);
@@ -39,10 +39,10 @@ class BuildCommand extends Command
             $this->output->write($buffer);
         });
 
-        if (!$process->isSuccessful()) {
+        if(!$process->isSuccessful()):
             $this->error('Build failed!');
             return Command::FAILURE;
-        }
+        endif;
 
         $this->info('Build completed successfully!');
         return Command::SUCCESS;

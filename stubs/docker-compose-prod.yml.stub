@@ -1,7 +1,7 @@
 version: '3.8'
 
 networks:
-  {{PROJECT_NAME}}:
+  network:
     driver: bridge
 
 services:
@@ -17,7 +17,7 @@ services:
     volumes:
       - ./:/var/www/html:cached
     networks:
-      - {{PROJECT_NAME}}
+      - network
     depends_on:
       - mysql
       - redis
@@ -36,7 +36,7 @@ services:
     volumes:
       - ./:/var/www/html:cached
     networks:
-      - {{PROJECT_NAME}}
+      - network
     depends_on:
       - laravel
     command: ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
@@ -70,9 +70,9 @@ services:
       MYSQL_PASSWORD: ${DB_PASSWORD}
       MYSQL_INNODB_USE_NATIVE_AIO: ${INNODB_USE_NATIVE_AIO}
     volumes:
-      - {{PROJECT_NAME}}-mysql-data:/var/lib/mysql
+      - mysql-data:/var/lib/mysql
     networks:
-      - {{PROJECT_NAME}}
+      - network
     command: --default-authentication-plugin=mysql_native_password
 
   redis:
@@ -81,13 +81,13 @@ services:
     ports:
       - "${REDIS_OUTER_PORT}:6379"
     networks:
-      - {{PROJECT_NAME}}
+      - network
     volumes:
-      - {{PROJECT_NAME}}-redis-data:/data
+      - redis-data:/data
     command: redis-server --appendonly yes
 
 volumes:
-  {{PROJECT_NAME}}-mysql-data:
+  mysql-data:
     driver: local
-  {{PROJECT_NAME}}-redis-data:
+  redis-data:
     driver: local

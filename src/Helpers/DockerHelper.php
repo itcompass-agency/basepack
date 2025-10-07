@@ -18,10 +18,10 @@ class DockerHelper
         $process = new Process(['docker', 'ps', '--filter', "name={$containerName}", '--format', '{{.Names}}']);
         $process->run();
         
-        if ($process->isSuccessful()) {
+        if($process->isSuccessful()):
             $output = trim($process->getOutput());
             return str_contains($output, $containerName);
-        }
+        endif;
         
         return false;
     }
@@ -31,10 +31,10 @@ class DockerHelper
         $process = new Process(['docker', 'ps', '--filter', "label=com.docker.compose.project={$projectName}", '--format', '{{.Names}}']);
         $process->run();
         
-        if ($process->isSuccessful()) {
+        if($process->isSuccessful()):
             $output = trim($process->getOutput());
             return !empty($output) ? explode("\n", $output) : [];
-        }
+        endif;
         
         return [];
     }

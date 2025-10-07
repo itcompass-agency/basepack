@@ -10,6 +10,7 @@ use ITCompass\BasePack\Commands\StatusCommand;
 use ITCompass\BasePack\Commands\ExecCommand;
 use ITCompass\BasePack\Commands\SslCheckCommand;
 use ITCompass\BasePack\Commands\DiagnoseCommand;
+use ITCompass\BasePack\Commands\DashboardCommand;
 
 class BasePackServiceProvider extends ServiceProvider
 {
@@ -77,6 +78,7 @@ class BasePackServiceProvider extends ServiceProvider
         $this->commands([
             InstallCommand::class,
             BuildCommand::class,
+            DashboardCommand::class,
             PublishCommand::class,
             StatusCommand::class,
             ExecCommand::class,

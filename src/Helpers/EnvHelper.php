@@ -8,43 +8,44 @@ class EnvHelper
 {
     public static function updateEnvFile(string $path, array $replacements): void
     {
-        if (!File::exists($path)) {
+        if(!File::exists($path)):
             return;
-        }
+        endif;
 
         $env = File::get($path);
 
-        foreach ($replacements as $key => $value) {
+        foreach($replacements as $key => $value):
             $pattern = "/^{$key}=.*/m";
             $replacement = "{$key}={$value}";
             
-            if (preg_match($pattern, $env)) {
+            if(preg_match($pattern, $env)):
                 $env = preg_replace($pattern, $replacement, $env);
-            } else {
+            else:
                 $env .= "\n{$replacement}";
-            }
-        }
+            endif;
+        endforeach;
 
         File::put($path, $env);
     }
 
     public static function getEnvValue(string $path, string $key, $default = null)
     {
-        if (!File::exists($path)) {
+        if(!File::exists($path)):
             return $default;
-        }
+        endif;
 
         $env = File::get($path);
         
-        if (preg_match("/^{$key}=(.*)$/m", $env, $matches)) {
+        if(preg_match("/^{$key}=(.*)$/m", $env, $matches)):
             $value = trim($matches[1]);
-            // Remove quotes if present
-            if ((str_starts_with($value, '"') && str_ends_with($value, '"')) ||
-                (str_starts_with($value, "'") && str_ends_with($value, "'"))) {
+            
+            if((str_starts_with($value, '"') && str_ends_with($value, '"')) ||
+                (str_starts_with($value, "'") && str_ends_with($value, "'"))):
                 $value = substr($value, 1, -1);
-            }
+            endif;
+
             return $value;
-        }
+        endif;
         
         return $default;
     }
@@ -60,9 +61,9 @@ class EnvHelper
             'BROADCAST_DRIVER' => 'redis',
         ];
 
-        if (File::exists($sourcePath)) {
+        if(File::exists($sourcePath)):
             File::copy($sourcePath, $targetPath);
             self::updateEnvFile($targetPath, $dockerReplacements);
-        }
+        endif;
     }
 }

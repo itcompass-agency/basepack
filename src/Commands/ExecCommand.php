@@ -23,9 +23,9 @@ class ExecCommand extends Command
         $makeCommand = $asRoot ? 'exec-by-root' : 'exec';
         $fullCommand = "make {$makeCommand} cmd=\"{$command}\"";
 
-        if ($container !== 'laravel') {
+        if($container !== 'laravel'):
             $fullCommand = "docker-compose exec {$container} {$command}";
-        }
+        endif;
 
         $this->info("Executing: {$command}");
 

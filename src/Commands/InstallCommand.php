@@ -2,8 +2,8 @@
 
 namespace ITCompass\BasePack\Commands;
 
-use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
+use Illuminate\Console\Command;
 
 class InstallCommand extends Command
 {
@@ -26,35 +26,25 @@ class InstallCommand extends Command
 
         $environment = $this->option('dev') ? 'dev' : ($this->option('prod') ? 'prod' : null);
         
-        if (!$environment) {
+        if(!$environment):
             $environment = $this->choice(
                 'Which environment would you like to install?',
                 ['dev', 'prod', 'both'],
                 'dev'
             );
-        }
+        endif;
 
         $force = $this->option('force');
         $this->domain = $this->option('domain') ?: 'localhost';
-
-        // Check for SSL certificates
-        if (!$this->checkSSLCertificates()) {
+        
+        if(!$this->checkSSLCertificates()):
             return Command::FAILURE;
-        }
-
-        // Create .env.docker first to avoid Docker warnings
+        endif;
+        
         $this->createDockerEnv($force);
-
-        // Copy Docker files
         $this->publishDockerFiles($force);
-        
-        // Copy Makefile
         $this->publishMakefile($force);
-        
-        // Copy docker-compose files
         $this->publishDockerCompose($environment, $force);
-        
-        // Update .gitignore
         $this->updateGitignore();
 
         $this->info('BasePack installed successfully!');
@@ -78,28 +68,25 @@ class InstallCommand extends Command
     {
         $sslPath = $this->option('ssl-path');
         
-        if ($sslPath) {
-            // User provided SSL path
+        if($sslPath):
             $certPath = rtrim($sslPath, '/') . '/cert.pem';
             $keyPath = rtrim($sslPath, '/') . '/key.pem';
             
-            if (!File::exists($certPath) || !File::exists($keyPath)) {
+            if(!File::exists($certPath) || !File::exists($keyPath)):
                 $this->error("SSL certificates not found in provided path: {$sslPath}");
                 $this->error("Expected files: cert.pem and key.pem");
                 return false;
-            }
+            endif;
             
             $this->sslCertPath = $certPath;
             $this->sslKeyPath = $keyPath;
             
-            // Try to extract domain from certificate
             $this->extractDomainFromCertificate($certPath);
             
             $this->info("Using SSL certificates from: {$sslPath}");
             $this->info("Domain: {$this->domain}");
             
-        } else {
-            // Check default locations
+        else:
             $defaultLocations = [
                 base_path('ssl'),
                 base_path('.ssl'),
@@ -110,22 +97,22 @@ class InstallCommand extends Command
             ];
             
             $found = false;
-            foreach ($defaultLocations as $location) {
-                if (File::exists($location . '/cert.pem') && File::exists($location . '/key.pem')) {
+
+            foreach($defaultLocations as $location):
+                if(File::exists($location . '/cert.pem') && File::exists($location . '/key.pem')):
                     $this->sslCertPath = $location . '/cert.pem';
                     $this->sslKeyPath = $location . '/key.pem';
                     $found = true;
                     
-                    // Try to extract domain from certificate
                     $this->extractDomainFromCertificate($this->sslCertPath);
                     
                     $this->info("Found SSL certificates in: {$location}");
                     $this->info("Domain: {$this->domain}");
                     break;
-                }
-            }
+                endif;
+            endforeach;
             
-            if (!$found) {
+            if(!$found):
                 $this->error('SSL certificates not found!');
                 $this->error('');
                 $this->error('BasePack requires SSL certificates to continue installation.');
@@ -133,9 +120,11 @@ class InstallCommand extends Command
                 $this->error('Please provide SSL certificates in one of the following ways:');
                 $this->error('');
                 $this->error('Option 1: Place certificates in one of these locations:');
-                foreach ($defaultLocations as $location) {
+
+                foreach($defaultLocations as $location):
                     $this->warn("  - {$location}/cert.pem and {$location}/key.pem");
-                }
+                endforeach;
+
                 $this->error('');
                 $this->error('Option 2: Specify the path using --ssl-path option:');
                 $this->warn('  php artisan basepack:install --ssl-path=/path/to/ssl');
@@ -148,37 +137,34 @@ class InstallCommand extends Command
                 $this->warn('    -subj "/C=US/ST=State/L=City/O=Organization/CN=localhost"');
                 
                 return false;
-            }
-        }
+            endif;
+        endif;
         
         return true;
     }
 
     protected function extractDomainFromCertificate(string $certPath): void
     {
-        if (!File::exists($certPath)) {
+        if(!File::exists($certPath)):
             return;
-        }
+        endif;
         
         $certContent = File::get($certPath);
         
-        // Use openssl to extract certificate info
         $tempFile = tempnam(sys_get_temp_dir(), 'cert');
         File::put($tempFile, $certContent);
         
         $output = shell_exec("openssl x509 -in {$tempFile} -noout -subject 2>/dev/null");
         
-        if ($output) {
-            // Extract CN (Common Name) from subject
-            if (preg_match('/CN\s*=\s*([^\s,\/]+)/', $output, $matches)) {
+        if($output):
+            if(preg_match('/CN\s*=\s*([^\s,\/]+)/', $output, $matches)):
                 $extractedDomain = $matches[1];
                 
-                // Only use extracted domain if user didn't specify one
-                if ($this->option('domain') === null || $this->option('domain') === 'localhost') {
+                if($this->option('domain') === null || $this->option('domain') === 'localhost'):
                     $this->domain = $extractedDomain;
-                }
-            }
-        }
+                endif;
+            endif;
+        endif;
         
         @unlink($tempFile);
     }
@@ -188,30 +174,27 @@ class InstallCommand extends Command
         $source = __DIR__.'/../../stubs/docker';
         $destination = base_path('.docker');
 
-        if (File::exists($destination) && !$force) {
-            if (!$this->confirm('.docker directory already exists. Do you want to overwrite it?')) {
+        if(File::exists($destination) && !$force):
+            if(!$this->confirm('.docker directory already exists. Do you want to overwrite it?')):
                 return;
-            }
-        }
-
-        // First copy all files except SSL
+            endif;
+        endif;
+        
         $this->copyDirectoryExceptSSL($source, $destination);
         
-        // Now copy SSL certificates to the correct location
-        if ($this->sslCertPath && $this->sslKeyPath) {
+        if($this->sslCertPath && $this->sslKeyPath):
             $sslDestination = $destination . '/general/ssl';
             
-            if (!File::exists($sslDestination)) {
+            if(!File::exists($sslDestination)):
                 File::makeDirectory($sslDestination, 0755, true);
-            }
+            endif;
             
             File::copy($this->sslCertPath, $sslDestination . '/cert.pem');
             File::copy($this->sslKeyPath, $sslDestination . '/key.pem');
             
             $this->info('SSL certificates copied to .docker/general/ssl/');
-        }
+        endif;
         
-        // Update nginx config with correct domain
         $this->updateNginxConfig($destination);
         
         $this->info('Docker files published successfully.');
@@ -219,39 +202,43 @@ class InstallCommand extends Command
 
     protected function copyDirectoryExceptSSL(string $source, string $destination): void
     {
-        if (!File::exists($destination)) {
+        if(!File::exists($destination)):
             File::makeDirectory($destination, 0755, true);
-        }
+        endif;
         
-        // Use recursive iterator to properly handle directory structure
         $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($source, \RecursiveDirectoryIterator::SKIP_DOTS),
-            \RecursiveIteratorIterator::SELF_FIRST
+            iterator: new \RecursiveDirectoryIterator(
+                directory: $source, 
+                flags: \RecursiveDirectoryIterator::SKIP_DOTS
+            ),
+            mode: \RecursiveIteratorIterator::SELF_FIRST
         );
         
-        foreach ($iterator as $item) {
+        foreach($iterator as $item):
             $relativePath = str_replace($source . DIRECTORY_SEPARATOR, '', $item->getPathname());
             
             // Skip SSL certificate stub files
-            if (strpos($relativePath, 'general' . DIRECTORY_SEPARATOR . 'ssl' . DIRECTORY_SEPARATOR . 'cert.pem') !== false ||
-                strpos($relativePath, 'general' . DIRECTORY_SEPARATOR . 'ssl' . DIRECTORY_SEPARATOR . 'key.pem') !== false) {
+            if(strpos($relativePath, 'general' . DIRECTORY_SEPARATOR . 'ssl' . DIRECTORY_SEPARATOR . 'cert.pem') !== false ||
+                strpos($relativePath, 'general' . DIRECTORY_SEPARATOR . 'ssl' . DIRECTORY_SEPARATOR . 'key.pem') !== false):
                 continue;
-            }
+            endif;
             
             $targetPath = $destination . DIRECTORY_SEPARATOR . $relativePath;
             
-            if ($item->isDir()) {
-                if (!File::exists($targetPath)) {
+            if($item->isDir()):
+                if(!File::exists($targetPath)):
                     File::makeDirectory($targetPath, 0755, true);
-                }
-            } else {
+                endif;
+            else:
                 $targetDir = dirname($targetPath);
-                if (!File::exists($targetDir)) {
+
+                if(!File::exists($targetDir)):
                     File::makeDirectory($targetDir, 0755, true);
-                }
+                endif;
+
                 File::copy($item->getPathname(), $targetPath);
-            }
-        }
+            endif;
+        endforeach;
     }
 
     protected function updateNginxConfig(string $dockerPath): void
@@ -261,8 +248,8 @@ class InstallCommand extends Command
             $dockerPath . '/prod/nginx.conf'
         ];
         
-        foreach ($nginxConfigs as $configPath) {
-            if (File::exists($configPath)) {
+        foreach($nginxConfigs as $configPath):
+            if(File::exists($configPath)):
                 $content = File::get($configPath);
                 
                 // Replace domain placeholders
@@ -271,8 +258,8 @@ class InstallCommand extends Command
                 $content = str_replace('localhost', $this->domain, $content);
                 
                 File::put($configPath, $content);
-            }
-        }
+            endif;
+        endforeach;
     }
 
     protected function publishMakefile(bool $force): void
@@ -280,11 +267,11 @@ class InstallCommand extends Command
         $source = __DIR__.'/../../stubs/Makefile.stub';
         $destination = base_path('Makefile');
 
-        if (File::exists($destination) && !$force) {
-            if (!$this->confirm('Makefile already exists. Do you want to overwrite it?')) {
+        if(File::exists($destination) && !$force):
+            if(!$this->confirm('Makefile already exists. Do you want to overwrite it?')):
                 return;
-            }
-        }
+            endif;
+        endif;
 
         // Replace placeholders in Makefile
         $content = File::get($source);
@@ -305,23 +292,23 @@ class InstallCommand extends Command
     {
         $files = [];
         
-        if ($environment === 'dev' || $environment === 'both') {
+        if($environment === 'dev' || $environment === 'both'):
             $files['docker-compose.yml.stub'] = 'docker-compose.yml';
-        }
+        endif;
         
-        if ($environment === 'prod' || $environment === 'both') {
+        if($environment === 'prod' || $environment === 'both'):
             $files['docker-compose-prod.yml.stub'] = 'docker-compose-prod.yml';
-        }
+        endif;
 
-        foreach ($files as $source => $destination) {
+        foreach($files as $source => $destination):
             $sourcePath = __DIR__.'/../../stubs/'.$source;
             $destinationPath = base_path($destination);
 
-            if (File::exists($destinationPath) && !$force) {
-                if (!$this->confirm("$destination already exists. Do you want to overwrite it?")) {
+            if(File::exists($destinationPath) && !$force):
+                if (!$this->confirm("$destination already exists. Do you want to overwrite it?")):
                     continue;
-                }
-            }
+                endif;
+            endif;
 
             $content = File::get($sourcePath);
             // Replace placeholders
@@ -333,7 +320,7 @@ class InstallCommand extends Command
 
             File::put($destinationPath, $content);
             $this->info("$destination published successfully.");
-        }
+        endforeach;
     }
 
     protected function createDockerEnv(bool $force): void
@@ -342,26 +329,23 @@ class InstallCommand extends Command
         $envDocker = base_path('.env.docker');
         $env = base_path('.env');
         
-        if (File::exists($envDocker) && !$force) {
+        if(File::exists($envDocker) && !$force):
             return;
-        }
-
-        // Copy .env.example or create basic .env for Docker
-        if (File::exists($envExample)) {
+        endif;
+        
+        if(File::exists($envExample)):
             File::copy($envExample, $envDocker);
-        } else {
+        else:
             $defaultEnv = File::get(__DIR__.'/../../stubs/.env.docker.stub');
             File::put($envDocker, $defaultEnv);
-        }
-
-        // Update values for Docker environment
+        endif;
+        
         $this->updateEnvFile($envDocker);
         
-        // If no .env file exists, create one from .env.docker
-        if (!File::exists($env)) {
+        if(!File::exists($env)):
             File::copy($envDocker, $env);
             $this->info('.env file created from .env.docker');
-        }
+        endif;
         
         $this->info('.env.docker file created successfully.');
     }
@@ -378,11 +362,10 @@ class InstallCommand extends Command
             'QUEUE_CONNECTION=sync' => 'QUEUE_CONNECTION=redis',
         ];
 
-        foreach ($replacements as $search => $replace) {
+        foreach($replacements as $search => $replace):
             $env = preg_replace('/^'.preg_quote($search, '/').'$/m', $replace, $env);
-        }
-
-        // Add domain configuration
+        endforeach;
+        
         if (!str_contains($env, 'APP_DOMAIN=')) {
             $env .= "\n# BasePack Configuration\n";
             $env .= "APP_DOMAIN={$this->domain}\n";
@@ -395,9 +378,9 @@ class InstallCommand extends Command
     {
         $gitignore = base_path('.gitignore');
         
-        if (!File::exists($gitignore)) {
+        if(!File::exists($gitignore)):
             return;
-        }
+        endif;
 
         $content = File::get($gitignore);
         $toAdd = [
@@ -409,11 +392,11 @@ class InstallCommand extends Command
             'storage/redis-data/',
         ];
 
-        foreach ($toAdd as $line) {
-            if (!str_contains($content, $line)) {
+        foreach($toAdd as $line):
+            if(!str_contains($content, $line)):
                 $content .= "\n" . $line;
-            }
-        }
+            endif;
+        endforeach;
 
         File::put($gitignore, $content);
         $this->info('.gitignore updated successfully.');

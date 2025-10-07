@@ -2,9 +2,9 @@
 
 namespace ITCompass\BasePack\Commands;
 
-use Illuminate\Console\Command;
-use Illuminate\Support\Facades\File;
 use ITCompass\BasePack\Traits\DisplaysLogo;
+use Illuminate\Support\Facades\File;
+use Illuminate\Console\Command;
 
 class DiagnoseCommand extends Command
 {
@@ -38,9 +38,9 @@ class DiagnoseCommand extends Command
         $this->checkMakefile();
         $this->checkProjectConfiguration();
 
-        if ($this->option('fix')) {
+        if($this->option('fix')):
             $this->attemptFixes();
-        }
+        endif;
 
         $this->displayResults();
 
@@ -49,44 +49,42 @@ class DiagnoseCommand extends Command
 
     protected function detectProjectName(): void
     {
-        // Try to get from environment
-        if (File::exists(base_path('.env'))) {
+        if(File::exists(base_path('.env'))):
             $env = File::get(base_path('.env'));
-            if (preg_match('/^COMPOSE_PROJECT_NAME=(.*)$/m', $env, $matches)) {
-                $this->projectName = trim($matches[1]);
-            }
-        }
 
-        // Try to get from Makefile
-        if (!$this->projectName && File::exists(base_path('Makefile'))) {
+            if(preg_match('/^COMPOSE_PROJECT_NAME=(.*)$/m', $env, $matches)):
+                $this->projectName = trim($matches[1]);
+            endif;
+        endif;
+        
+        if(!$this->projectName && File::exists(base_path('Makefile'))):
             $makefile = File::get(base_path('Makefile'));
-            if (preg_match('/^export COMPOSE_PROJECT_NAME=(.*)$/m', $makefile, $matches)) {
+            if(preg_match('/^export COMPOSE_PROJECT_NAME=(.*)$/m', $makefile, $matches)):
                 $this->projectName = trim($matches[1]);
-            }
-        }
-
-        // Try to detect from SSL certificate
-        if (!$this->projectName) {
+            endif;
+        endif;
+        
+        if(!$this->projectName):
             $sslPath = base_path('.docker/general/ssl/cert.pem');
-            if (File::exists($sslPath)) {
+            if(File::exists($sslPath)):
                 $output = shell_exec("openssl x509 -in {$sslPath} -noout -subject 2>/dev/null");
-                if ($output && preg_match('/CN\s*=\s*([^\s,\/]+)/', $output, $matches)) {
+                if($output && preg_match('/CN\s*=\s*([^\s,\/]+)/', $output, $matches)):
                     $domain = $matches[1];
-                    if ($domain !== 'localhost') {
+                    if($domain !== 'localhost'):
                         $parts = explode('.', $domain);
-                        if (count($parts) >= 2) {
+                        if(count($parts) >= 2):
                             array_pop($parts); // Remove TLD
                             $this->projectName = implode('_', $parts) . '_basepack';
-                        }
-                    }
-                }
-            }
-        }
+                        endif;
+                    endif;
+                endif;
+            endif;
+        endif;
 
         // Default
-        if (!$this->projectName) {
+        if(!$this->projectName):
             $this->projectName = 'basepack';
-        }
+        endif;
     }
 
     protected function checkProjectConfiguration(): void
@@ -94,19 +92,19 @@ class DiagnoseCommand extends Command
         $this->info('📦 Project Configuration:');
         $this->line('  Project Name: ' . $this->projectName);
         
-        // Check if containers are running
         $runningContainers = shell_exec("docker ps --filter 'name={$this->projectName}' --format '{{.Names}}'");
-        if ($runningContainers) {
+        if($runningContainers):
             $containers = explode("\n", trim($runningContainers));
             $this->success[] = "✅ Found " . count($containers) . " running container(s) for project: {$this->projectName}";
-            foreach ($containers as $container) {
-                if (!empty($container)) {
+
+            foreach($containers as $container):
+                if(!empty($container)):
                     $this->line('    • ' . $container);
-                }
-            }
-        } else {
+                endif;
+            endforeach;
+        else:
             $this->warnings[] = "⚠️  No running containers found for project: {$this->projectName}";
-        }
+        endif;
     }
 
     protected function checkDockerStructure(): void
@@ -128,74 +126,77 @@ class DiagnoseCommand extends Command
             '.docker/general/cron' => 'Cron config',
         ];
 
-        foreach ($requiredFiles as $path => $description) {
-            if (File::exists(base_path($path))) {
+        foreach($requiredFiles as $path => $description):
+            if(File::exists(base_path($path))):
                 $this->success[] = "✅ {$description}: {$path}";
-            } else {
+            else:
                 $this->errors[] = "❌ Missing: {$description} ({$path})";
-            }
-        }
+            endif;
+        endforeach;
 
         // Check SSL certificates separately
         $sslPath = base_path('.docker/general/ssl');
-        if (File::exists($sslPath)) {
-            if (File::exists($sslPath . '/cert.pem') && File::exists($sslPath . '/key.pem')) {
+
+        if(File::exists($sslPath)):
+            if(File::exists($sslPath . '/cert.pem') && File::exists($sslPath . '/key.pem')):
                 $this->success[] = "✅ SSL certificates found in Docker directory";
                 
                 // Check certificate details
                 $certInfo = $this->getCertificateInfo($sslPath . '/cert.pem');
-                if ($certInfo) {
+
+                if($certInfo):
                     $this->line('  Certificate Details:');
-                    foreach ($certInfo as $key => $value) {
+
+                    foreach($certInfo as $key => $value):
                         $this->line("    • {$key}: {$value}");
-                    }
-                }
-            } else {
+                    endforeach;
+                endif;
+            else:
                 $this->warnings[] = "⚠️  SSL directory exists but certificates missing";
-            }
-        } else {
+            endif;
+        else:
             $this->errors[] = "❌ SSL directory missing: .docker/general/ssl/";
-        }
+        endif;
     }
 
     protected function getCertificateInfo(string $certPath): ?array
     {
-        if (!File::exists($certPath)) {
+        if(!File::exists($certPath)):
             return null;
-        }
+        endif;
 
         $output = shell_exec("openssl x509 -in {$certPath} -noout -subject -dates 2>/dev/null");
         
-        if (!$output) {
+        if(!$output):
             return null;
-        }
+        endif;
 
         $info = [];
         
         // Extract domain/CN
-        if (preg_match('/CN\s*=\s*([^\s,\/]+)/', $output, $matches)) {
+        if(preg_match('/CN\s*=\s*([^\s,\/]+)/', $output, $matches)):
             $info['Domain'] = $matches[1];
-        }
+        endif;
         
         // Extract validity dates
-        if (preg_match('/notBefore=(.+)/', $output, $matches)) {
+        if(preg_match('/notBefore=(.+)/', $output, $matches)):
             $info['Valid from'] = date('Y-m-d', strtotime($matches[1]));
-        }
+        endif;
         
-        if (preg_match('/notAfter=(.+)/', $output, $matches)) {
+        if(preg_match('/notAfter=(.+)/', $output, $matches)):
             $notAfter = strtotime($matches[1]);
             $info['Valid until'] = date('Y-m-d', $notAfter);
             
             // Check if expired or expiring soon
             $daysLeft = ($notAfter - time()) / (60 * 60 * 24);
-            if ($daysLeft < 0) {
+            if($daysLeft < 0):
                 $info['Status'] = '❌ EXPIRED';
-            } elseif ($daysLeft < 30) {
+            elseif ($daysLeft < 30):
                 $info['Status'] = '⚠️  Expiring soon (' . round($daysLeft) . ' days)';
-            } else {
+            else:
                 $info['Status'] = '✅ Valid (' . round($daysLeft) . ' days remaining)';
-            }
-        }
+            endif;
+        endif;
         
         return $info;
     }
@@ -207,12 +208,11 @@ class DiagnoseCommand extends Command
             '.env.docker' => 'Docker environment template',
         ];
 
-        foreach ($envFiles as $file => $description) {
+        foreach($envFiles as $file => $description):
             $path = base_path($file);
-            if (File::exists($path)) {
+            if(File::exists($path)):
                 $content = File::get($path);
                 
-                // Check for required variables
                 $requiredVars = [
                     'DB_HOST',
                     'DB_PORT',
@@ -228,21 +228,22 @@ class DiagnoseCommand extends Command
                 ];
 
                 $missingVars = [];
-                foreach ($requiredVars as $var) {
-                    if (!preg_match("/^{$var}=/m", $content)) {
-                        $missingVars[] = $var;
-                    }
-                }
 
-                if (empty($missingVars)) {
+                foreach($requiredVars as $var):
+                    if(!preg_match("/^{$var}=/m", $content)):
+                        $missingVars[] = $var;
+                    endif;
+                endforeach;
+
+                if(empty($missingVars)):
                     $this->success[] = "✅ {$description}: All required variables present";
-                } else {
+                else:
                     $this->warnings[] = "⚠️  {$description}: Missing variables: " . implode(', ', $missingVars);
-                }
-            } else {
+                endif;
+            else:
                 $this->errors[] = "❌ Missing: {$description} ({$file})";
-            }
-        }
+            endif;
+        endforeach;
     }
 
     protected function checkSSLCertificates(): void
@@ -255,17 +256,19 @@ class DiagnoseCommand extends Command
         ];
 
         $found = false;
-        foreach ($sslPaths as $path) {
+
+        foreach($sslPaths as $path):
             $fullPath = base_path($path);
-            if (File::exists($fullPath . '/cert.pem') && File::exists($fullPath . '/key.pem')) {
+
+            if(File::exists($fullPath . '/cert.pem') && File::exists($fullPath . '/key.pem')):
                 $this->success[] = "✅ SSL certificates found in: {$path}/";
                 $found = true;
-            }
-        }
+            endif;
+        endforeach;
 
-        if (!$found) {
+        if(!$found):
             $this->errors[] = "❌ No SSL certificates found in any standard location";
-        }
+        endif;
     }
 
     protected function checkDockerCompose(): void
@@ -275,75 +278,69 @@ class DiagnoseCommand extends Command
             'docker-compose-prod.yml' => 'Production compose file',
         ];
 
-        foreach ($composeFiles as $file => $description) {
-            if (File::exists(base_path($file))) {
+        foreach($composeFiles as $file => $description):
+            if(File::exists(base_path($file))):
                 $this->success[] = "✅ {$description} exists";
                 
-                // Check if project name is correctly set
                 $content = File::get(base_path($file));
-                if (!str_contains($content, $this->projectName)) {
+
+                if(!str_contains($content, $this->projectName)):
                     $this->warnings[] = "⚠️  {$file} may have incorrect project name";
-                }
-            } else {
+                endif;
+            else:
                 $this->warnings[] = "⚠️  Missing: {$description}";
-            }
-        }
+            endif;
+        endforeach;
     }
 
     protected function checkMakefile(): void
     {
-        if (File::exists(base_path('Makefile'))) {
+        if(File::exists(base_path('Makefile'))):
             $this->success[] = "✅ Makefile exists";
             
-            // Check project name in Makefile
             $content = File::get(base_path('Makefile'));
-            if (!str_contains($content, "COMPOSE_PROJECT_NAME={$this->projectName}")) {
+            if(!str_contains($content, "COMPOSE_PROJECT_NAME={$this->projectName}")):
                 $this->warnings[] = "⚠️  Makefile may have incorrect project name";
-            }
-        } else {
+            endif;
+        else:
             $this->errors[] = "❌ Missing: Makefile";
-        }
+        endif;
     }
 
     protected function attemptFixes(): void
     {
         $this->info('🔧 Attempting to fix issues...');
         $this->newLine();
-
-        // Fix missing .env
-        if (!File::exists(base_path('.env'))) {
-            if (File::exists(base_path('.env.docker'))) {
+        
+        if(!File::exists(base_path('.env'))):
+            if(File::exists(base_path('.env.docker'))):
                 File::copy(base_path('.env.docker'), base_path('.env'));
                 $this->info('Fixed: Created .env from .env.docker');
-            } elseif (File::exists(base_path('.env.example'))) {
+            elseif(File::exists(base_path('.env.example'))):
                 File::copy(base_path('.env.example'), base_path('.env'));
                 $this->updateEnvForDocker(base_path('.env'));
                 $this->info('Fixed: Created .env from .env.example');
-            }
-        }
-
-        // Fix missing environment variables
+            endif;
+        endif;
+        
         $this->fixEnvironmentVariables();
-
-        // Fix SSL directory
-        if (!File::exists(base_path('.docker/general/ssl'))) {
+        
+        if(!File::exists(base_path('.docker/general/ssl'))):
             File::makeDirectory(base_path('.docker/general/ssl'), 0755, true);
             $this->info('Fixed: Created SSL directory');
 
-            // Copy SSL from other locations if available
             $sslSources = ['.ssl', 'ssl', 'certificates'];
-            foreach ($sslSources as $source) {
+            foreach($sslSources as $source):
                 $sourcePath = base_path($source);
-                if (File::exists($sourcePath . '/cert.pem') && File::exists($sourcePath . '/key.pem')) {
+                if(File::exists($sourcePath . '/cert.pem') && File::exists($sourcePath . '/key.pem')):
                     File::copy($sourcePath . '/cert.pem', base_path('.docker/general/ssl/cert.pem'));
                     File::copy($sourcePath . '/key.pem', base_path('.docker/general/ssl/key.pem'));
                     $this->info("Fixed: Copied SSL certificates from {$source}/");
                     break;
-                }
-            }
-        }
-
-        // Fix project name consistency
+                endif;
+            endforeach;
+        endif;
+        
         $this->fixProjectNameConsistency();
     }
 
@@ -351,18 +348,17 @@ class DiagnoseCommand extends Command
     {
         $updated = false;
         
-        // Update .env file
-        if (File::exists(base_path('.env'))) {
+        if(File::exists(base_path('.env'))):
             $env = File::get(base_path('.env'));
-            if (!preg_match('/^COMPOSE_PROJECT_NAME=/m', $env)) {
+
+            if(!preg_match('/^COMPOSE_PROJECT_NAME=/m', $env)):
                 $env .= "\nCOMPOSE_PROJECT_NAME={$this->projectName}\n";
                 File::put(base_path('.env'), $env);
                 $updated = true;
-            }
-        }
-
-        // Update Makefile
-        if (File::exists(base_path('Makefile'))) {
+            endif;
+        endif;
+        
+        if(File::exists(base_path('Makefile'))):
             $makefile = File::get(base_path('Makefile'));
             $makefile = preg_replace(
                 '/^export COMPOSE_PROJECT_NAME=.*$/m',
@@ -371,18 +367,18 @@ class DiagnoseCommand extends Command
             );
             File::put(base_path('Makefile'), $makefile);
             $updated = true;
-        }
+        endif;
 
-        if ($updated) {
+        if($updated):
             $this->info("Fixed: Updated project name to '{$this->projectName}' across configuration files");
-        }
+        endif;
     }
 
     protected function fixEnvironmentVariables(): void
     {
-        if (!File::exists(base_path('.env'))) {
+        if(!File::exists(base_path('.env'))):
             return;
-        }
+        endif;
 
         $env = File::get(base_path('.env'));
         $updated = false;
@@ -404,17 +400,17 @@ class DiagnoseCommand extends Command
             'COMPOSE_PROJECT_NAME' => $this->projectName,
         ];
 
-        foreach ($defaults as $key => $value) {
-            if (!preg_match("/^{$key}=/m", $env)) {
+        foreach($defaults as $key => $value):
+            if(!preg_match("/^{$key}=/m", $env)):
                 $env .= "\n{$key}={$value}";
                 $updated = true;
-            }
-        }
+            endif;
+        endforeach;
 
-        if ($updated) {
+        if($updated):
             File::put(base_path('.env'), $env);
             $this->info('Fixed: Added missing environment variables');
-        }
+        endif;
     }
 
     protected function updateEnvForDocker(string $path): void
@@ -429,9 +425,9 @@ class DiagnoseCommand extends Command
             'QUEUE_CONNECTION=sync' => 'QUEUE_CONNECTION=redis',
         ];
 
-        foreach ($replacements as $search => $replace) {
+        foreach($replacements as $search => $replace):
             $env = preg_replace('/^'.preg_quote($search, '/').'$/m', $replace, $env);
-        }
+        endforeach;
 
         File::put($path, $env);
     }
@@ -440,29 +436,35 @@ class DiagnoseCommand extends Command
     {
         $this->newLine();
         
-        if (!empty($this->success)) {
+        if(!empty($this->success)):
             $this->info('✅ Successful checks:');
-            foreach ($this->success as $message) {
-                $this->line("  {$message}");
-            }
-            $this->newLine();
-        }
 
-        if (!empty($this->warnings)) {
+            foreach($this->success as $message):
+                $this->line("  {$message}");
+            endforeach;
+
+            $this->newLine();
+        endif;
+
+        if(!empty($this->warnings)):
             $this->warn('⚠️  Warnings:');
-            foreach ($this->warnings as $message) {
-                $this->line("  {$message}");
-            }
-            $this->newLine();
-        }
 
-        if (!empty($this->errors)) {
-            $this->error('❌ Errors:');
-            foreach ($this->errors as $message) {
+            foreach($this->warnings as $message):
                 $this->line("  {$message}");
-            }
+            endforeach;
+
             $this->newLine();
-        }
+        endif;
+
+        if(!empty($this->errors)):
+            $this->error('❌ Errors:');
+
+            foreach($this->errors as $message):
+                $this->line("  {$message}");
+            endforeach;
+
+            $this->newLine();
+        endif;
 
         // Summary
         $this->line('╔════════════════════════════════════════════════════════════════╗');
@@ -474,17 +476,17 @@ class DiagnoseCommand extends Command
         $this->line('║  ❌ Errors:   ' . str_pad(count($this->errors) . ' critical issues', 49) . '║');
         $this->line('╚════════════════════════════════════════════════════════════════╝');
 
-        if (empty($this->errors)) {
+        if(empty($this->errors)):
             $this->newLine();
             $this->info('🎉 BasePack installation looks good!');
             
-            if (!empty($this->warnings)) {
+            if(!empty($this->warnings)):
                 $this->info('Consider addressing the warnings for optimal performance.');
-            }
-        } else {
+            endif;
+        else:
             $this->newLine();
             $this->error('⚠️  Issues found! Run with --fix flag to attempt automatic fixes:');
             $this->line('  php artisan basepack:diagnose --fix');
-        }
+        endif;
     }
 }

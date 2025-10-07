@@ -2,8 +2,8 @@
 
 namespace ITCompass\BasePack\Commands;
 
-use Illuminate\Console\Command;
 use Symfony\Component\Process\Process;
+use Illuminate\Console\Command;
 
 class StatusCommand extends Command
 {
@@ -17,10 +17,10 @@ class StatusCommand extends Command
         $process = Process::fromShellCommandline('docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"');
         $process->run();
 
-        if (!$process->isSuccessful()) {
+        if(!$process->isSuccessful()):
             $this->error('Failed to check Docker status. Make sure Docker is running.');
             return Command::FAILURE;
-        }
+        endif;
 
         $output = $process->getOutput();
         $lines = explode("\n", trim($output));
@@ -28,27 +28,28 @@ class StatusCommand extends Command
         $containers = [];
         $projectName = strtolower(config('basepack.project_name', 'laravel'));
         
-        foreach ($lines as $index => $line) {
-            if ($index === 0) continue; // Skip header
-            if (empty($line)) continue;
+        foreach($lines as $index => $line):
+            if($index === 0) continue;
+            if(empty($line)) continue;
             
-            if (str_contains($line, $projectName)) {
+            if(str_contains($line, $projectName)):
                 $parts = preg_split('/\s{2,}/', $line);
-                if (count($parts) >= 2) {
+
+                if(count($parts) >= 2):
                     $containers[] = [
                         'Name' => $parts[0] ?? '',
                         'Status' => $parts[1] ?? '',
                         'Ports' => $parts[2] ?? '',
                     ];
-                }
-            }
-        }
+                endif;
+            endif;
+        endforeach;
 
-        if (empty($containers)) {
+        if(empty($containers)):
             $this->warn('No BasePack containers are running.');
             $this->info('Run `make start` to start the containers.');
             return Command::SUCCESS;
-        }
+        endif;
 
         $this->table(['Container', 'Status', 'Ports'], $containers);
         
