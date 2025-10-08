@@ -2,31 +2,26 @@
 
 namespace ITCompass\BasePack;
 
-use Illuminate\Support\ServiceProvider;
-use ITCompass\BasePack\Commands\InstallCommand;
-use ITCompass\BasePack\Commands\BuildCommand;
-use ITCompass\BasePack\Commands\PublishCommand;
-use ITCompass\BasePack\Commands\StatusCommand;
-use ITCompass\BasePack\Commands\ExecCommand;
+use ITCompass\BasePack\Commands\DashboardCommand;
 use ITCompass\BasePack\Commands\SslCheckCommand;
 use ITCompass\BasePack\Commands\DiagnoseCommand;
-use ITCompass\BasePack\Commands\DashboardCommand;
+use ITCompass\BasePack\Commands\InstallCommand;
+use ITCompass\BasePack\Commands\PublishCommand;
+use ITCompass\BasePack\Commands\StatusCommand;
+use ITCompass\BasePack\Commands\BuildCommand;
+use ITCompass\BasePack\Commands\ExecCommand;
+use ITCompass\BasePack\Commands\TestCommand;
+use Illuminate\Support\ServiceProvider;
 
 class BasePackServiceProvider extends ServiceProvider
 {
-    /**
-     * Register services.
-     */
     public function register(): void
     {
         $this->mergeConfigFrom(
             __DIR__.'/../config/basepack.php', 'basepack'
         );
     }
-
-    /**
-     * Bootstrap services.
-     */
+    
     public function boot(): void
     {
         if ($this->app->runningInConsole()) {
@@ -34,10 +29,7 @@ class BasePackServiceProvider extends ServiceProvider
             $this->registerCommands();
         }
     }
-
-    /**
-     * Configure the publishable resources offered by the package.
-     */
+    
     protected function configurePublishing(): void
     {
         // Publish configuration
@@ -69,10 +61,7 @@ class BasePackServiceProvider extends ServiceProvider
             __DIR__.'/../stubs/.env.docker.stub' => base_path('.env.docker'),
         ], ['basepack-env', 'basepack']);
     }
-
-    /**
-     * Register the package's commands.
-     */
+    
     protected function registerCommands(): void
     {
         $this->commands([
@@ -84,6 +73,7 @@ class BasePackServiceProvider extends ServiceProvider
             ExecCommand::class,
             SslCheckCommand::class,
             DiagnoseCommand::class,
+            TestCommand::class,
         ]);
     }
 }

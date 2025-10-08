@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(composer install:*)",
+      "Bash(vendor/bin/phpunit:*)",
+      "Bash(php artisan basepack:test:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

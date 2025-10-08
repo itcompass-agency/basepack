@@ -2,20 +2,20 @@
 
 namespace ITCompass\BasePack\Commands;
 
-use Illuminate\Console\Command;
 use Symfony\Component\Process\Process;
+use Illuminate\Console\Command;
 
 class BuildCommand extends Command
 {
-    protected $signature = 'basepack:build 
-                            {--env=dev : Environment to build (dev/prod)}
+    protected $signature = 'basepack:build
+                            {--environment=dev : Environment to build (dev/prod)}
                             {--no-cache : Build without cache}';
 
     protected $description = 'Build Docker containers for the project';
 
     public function handle(): int
     {
-        $environment = $this->option('env');
+        $environment = $this->option('environment');
         $noCache = $this->option('no-cache');
 
         if(!in_array($environment, ['dev', 'prod'])):
