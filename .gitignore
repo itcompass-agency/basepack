@@ -3,4 +3,8 @@ composer.lock
 /node_modules
 /package-lock.json
 .phpunit.cache
-reports
+reports/
+coverage-report/
+coverage*.xml
+coverage.txt
+.env.testing

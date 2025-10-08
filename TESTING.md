@@ -96,7 +96,7 @@ make ci            # Full CI simulation
 Our CI pipeline runs automatically on every push and pull request, ensuring code quality remains high:
 
 - **Multi-PHP Testing**: We test against PHP 8.1, 8.2, and 8.3 to ensure broad compatibility
-- **Laravel Version Matrix**: Tests run against Laravel 10.x, 11.x, and 12.x
+- **Laravel Version Matrix**: Tests run against Laravel 10.x, 11.x, and 12.x (11.x+ requires PHP 8.2+)
 - **Dependency Variations**: Both `prefer-lowest` and `prefer-stable` scenarios are covered
 - **Quality Gates**: Code validation, PSR-4 compliance, and security audits
 

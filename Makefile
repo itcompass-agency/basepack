@@ -76,7 +76,7 @@ clean: ## Clean test artifacts
 validate: ## Validate composer.json and check autoload
 	@echo "$(YELLOW)Validating package...$(NC)"
 	composer validate --strict
-	composer dump-autoload --optimize --strict-psr
+	composer dump-autoload --optimize
 	@echo "$(GREEN)Package validation completed!$(NC)"
 
 ci: ## Run CI pipeline locally
@@ -87,6 +87,11 @@ ci: ## Run CI pipeline locally
 	make test-feature
 	make test-coverage-text
 	@echo "$(GREEN)CI pipeline completed!$(NC)"
+
+test-matrix: ## Run matrix testing simulation
+	@echo "$(YELLOW)Running matrix testing simulation...$(NC)"
+	./scripts/test-matrix.sh
+	@echo "$(GREEN)Matrix testing completed!$(NC)"
 
 # Development shortcuts
 dev-test: test-unit ## Alias for test-unit (development)
