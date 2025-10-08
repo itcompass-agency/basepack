@@ -205,7 +205,7 @@ class DiagnoseCommand extends Command
     {
         $envFiles = [
             '.env' => 'Main environment file',
-            '.env.docker' => 'Docker environment template',
+            '.env.docker' => 'Docker environment file',
         ];
 
         foreach($envFiles as $file => $description):
@@ -213,19 +213,28 @@ class DiagnoseCommand extends Command
             if(File::exists($path)):
                 $content = File::get($path);
                 
-                $requiredVars = [
-                    'DB_HOST',
-                    'DB_PORT',
-                    'DB_DATABASE',
-                    'DB_USERNAME',
-                    'DB_PASSWORD',
-                    'DB_OUTER_PORT',
-                    'REDIS_HOST',
-                    'REDIS_OUTER_PORT',
-                    'WEB_PORT_HTTP',
-                    'WEB_PORT_SSL',
-                    'COMPOSE_PROJECT_NAME',
-                ];
+                if($file === '.env.docker'):
+                    $requiredVars = [
+                        'DB_HOST',
+                        'DB_PORT',
+                        'REDIS_HOST',
+                        'REDIS_PORT',
+                        'WEB_PORT_HTTP',
+                        'WEB_PORT_SSL',
+                        'COMPOSE_PROJECT_NAME',
+                    ];
+                else:
+                    $requiredVars = [
+                        'DB_HOST',
+                        'DB_PORT',
+                        'DB_DATABASE',
+                        'DB_USERNAME',
+                        'DB_PASSWORD',
+                        'REDIS_HOST',
+                        'CACHE_DRIVER',
+                        'SESSION_DRIVER',
+                    ];
+                endif;
 
                 $missingVars = [];
 
@@ -241,7 +250,11 @@ class DiagnoseCommand extends Command
                     $this->warnings[] = "⚠️  {$description}: Missing variables: " . implode(', ', $missingVars);
                 endif;
             else:
-                $this->errors[] = "❌ Missing: {$description} ({$file})";
+                if($file === '.env'):
+                    $this->errors[] = "❌ Missing: {$description} ({$file})";
+                else:
+                    $this->warnings[] = "⚠️  Missing: {$description} ({$file}) - Run 'php artisan basepack:install' to create it";
+                endif;
             endif;
         endforeach;
     }
@@ -376,40 +389,59 @@ class DiagnoseCommand extends Command
 
     protected function fixEnvironmentVariables(): void
     {
-        if(!File::exists(base_path('.env'))):
-            return;
+        $envDockerPath = base_path('.env.docker');
+
+        if(File::exists($envDockerPath)):
+            $env = File::get($envDockerPath);
+            $updated = false;
+
+            $dockerDefaults = [
+                'DB_HOST' => 'mysql',
+                'DB_PORT' => '3306',
+                'DB_DATABASE' => 'laravel',
+                'DB_USERNAME' => 'laravel',
+                'DB_PASSWORD' => 'secret',
+                'DB_OUTER_PORT' => '3306',
+                'REDIS_HOST' => 'redis',
+                'REDIS_PORT' => '6379',
+                'REDIS_OUTER_PORT' => '6379',
+                'WEB_PORT_HTTP' => '80',
+                'WEB_PORT_SSL' => '443',
+                'CACHE_DRIVER' => 'redis',
+                'SESSION_DRIVER' => 'redis',
+                'QUEUE_CONNECTION' => 'redis',
+                'BROADCAST_DRIVER' => 'redis',
+                'XDEBUG_CONFIG' => 'main',
+                'INNODB_USE_NATIVE_AIO' => '1',
+                'COMPOSE_PROJECT_NAME' => $this->projectName,
+            ];
+
+            foreach($dockerDefaults as $key => $value):
+                if(!preg_match("/^{$key}=/m", $env)):
+                    $env .= "\n{$key}={$value}";
+                    $updated = true;
+                endif;
+            endforeach;
+
+            if($updated):
+                File::put($envDockerPath, $env);
+                $this->info('Fixed: Added missing variables to .env.docker');
+            endif;
         endif;
-
-        $env = File::get(base_path('.env'));
-        $updated = false;
-
-        $defaults = [
-            'DB_HOST' => 'mysql',
-            'DB_PORT' => '3306',
-            'DB_DATABASE' => 'laravel',
-            'DB_USERNAME' => 'laravel',
-            'DB_PASSWORD' => 'secret',
-            'DB_OUTER_PORT' => '3306',
-            'REDIS_HOST' => 'redis',
-            'REDIS_PORT' => '6379',
-            'REDIS_OUTER_PORT' => '6379',
-            'WEB_PORT_HTTP' => '80',
-            'WEB_PORT_SSL' => '443',
-            'XDEBUG_CONFIG' => 'main',
-            'INNODB_USE_NATIVE_AIO' => '1',
-            'COMPOSE_PROJECT_NAME' => $this->projectName,
-        ];
-
-        foreach($defaults as $key => $value):
-            if(!preg_match("/^{$key}=/m", $env)):
-                $env .= "\n{$key}={$value}";
+        
+        if(File::exists(base_path('.env'))):
+            $env = File::get(base_path('.env'));
+            $updated = false;
+            
+            if(!preg_match('/^COMPOSE_PROJECT_NAME=/m', $env)):
+                $env .= "\nCOMPOSE_PROJECT_NAME={$this->projectName}\n";
                 $updated = true;
             endif;
-        endforeach;
 
-        if($updated):
-            File::put(base_path('.env'), $env);
-            $this->info('Fixed: Added missing environment variables');
+            if($updated):
+                File::put(base_path('.env'), $env);
+                $this->info('Fixed: Added missing variables to .env');
+            endif;
         endif;
     }
 

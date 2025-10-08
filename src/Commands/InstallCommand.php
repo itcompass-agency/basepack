@@ -53,11 +53,12 @@ class InstallCommand extends Command
         $this->table(
             ['Next Steps'],
             [
-                ['1. Review and update .env file with your database credentials'],
-                ['2. Run: make build'],
-                ['3. Run: make start'],
-                ['4. Run: make composer-install'],
-                ['5. Run: make migrate'],
+                ['1. Review and update .env.docker file with your project settings'],
+                ['2. Copy .env.docker to .env or merge with existing .env'],
+                ['3. Run: make build'],
+                ['4. Run: make start'],
+                ['5. Run: make composer-install'],
+                ['6. Run: make migrate'],
             ]
         );
 
@@ -217,7 +218,6 @@ class InstallCommand extends Command
         foreach($iterator as $item):
             $relativePath = str_replace($source . DIRECTORY_SEPARATOR, '', $item->getPathname());
             
-            // Skip SSL certificate stub files
             if(strpos($relativePath, 'general' . DIRECTORY_SEPARATOR . 'ssl' . DIRECTORY_SEPARATOR . 'cert.pem') !== false ||
                 strpos($relativePath, 'general' . DIRECTORY_SEPARATOR . 'ssl' . DIRECTORY_SEPARATOR . 'key.pem') !== false):
                 continue;
@@ -273,14 +273,13 @@ class InstallCommand extends Command
             endif;
         endif;
 
+        $projectName = $this->generateProjectName();
+        
         // Replace placeholders in Makefile
         $content = File::get($source);
         $content = str_replace(
             ['{{PROJECT_NAME}}', '{{APP_NAME}}'],
-            [
-                strtolower(str_replace(' ', '-', config('app.name', 'laravel'))),
-                config('app.name', 'Laravel')
-            ],
+            [$projectName, config('app.name', 'Laravel')],
             $content
         );
 
@@ -300,6 +299,8 @@ class InstallCommand extends Command
             $files['docker-compose-prod.yml.stub'] = 'docker-compose-prod.yml';
         endif;
 
+        $projectName = $this->generateProjectName();
+
         foreach($files as $source => $destination):
             $sourcePath = __DIR__.'/../../stubs/'.$source;
             $destinationPath = base_path($destination);
@@ -311,12 +312,7 @@ class InstallCommand extends Command
             endif;
 
             $content = File::get($sourcePath);
-            // Replace placeholders
-            $content = str_replace(
-                '{{PROJECT_NAME}}',
-                strtolower(str_replace(' ', '-', config('app.name', 'laravel'))),
-                $content
-            );
+            $content = str_replace('{{PROJECT_NAME}}', $projectName, $content);
 
             File::put($destinationPath, $content);
             $this->info("$destination published successfully.");
@@ -325,53 +321,58 @@ class InstallCommand extends Command
 
     protected function createDockerEnv(bool $force): void
     {
-        $envExample = base_path('.env.example');
         $envDocker = base_path('.env.docker');
-        $env = base_path('.env');
         
         if(File::exists($envDocker) && !$force):
+            $this->warn('.env.docker already exists. Skipping...');
             return;
         endif;
         
-        if(File::exists($envExample)):
-            File::copy($envExample, $envDocker);
-        else:
-            $defaultEnv = File::get(__DIR__.'/../../stubs/.env.docker.stub');
-            File::put($envDocker, $defaultEnv);
+        $stubContent = File::get(__DIR__.'/../../stubs/.env.docker.stub');
+        
+        $projectName = $this->generateProjectName();
+        $stubContent = str_replace('COMPOSE_PROJECT_NAME=basepack', "COMPOSE_PROJECT_NAME={$projectName}", $stubContent);
+        
+        if($this->domain !== 'localhost'):
+            $stubContent .= "\n# Application Domain\n";
+            $stubContent .= "APP_DOMAIN={$this->domain}\n";
         endif;
         
-        $this->updateEnvFile($envDocker);
-        
-        if(!File::exists($env)):
-            File::copy($envDocker, $env);
-            $this->info('.env file created from .env.docker');
-        endif;
+        File::put($envDocker, $stubContent);
         
         $this->info('.env.docker file created successfully.');
+        $this->newLine();
+        $this->info('📋 Next steps for .env configuration:');
+        $this->line('  1. If you don\'t have .env file:');
+        $this->line('     cp .env.docker .env');
+        $this->line('  2. If you already have .env file:');
+        $this->line('     Merge Docker settings from .env.docker into your .env');
     }
 
-    protected function updateEnvFile(string $path): void
+    protected function generateProjectName(): string
     {
-        $env = File::get($path);
+        if(File::exists(base_path('.env'))):
+            $env = File::get(base_path('.env'));
+            if(preg_match('/^COMPOSE_PROJECT_NAME=(.*)$/m', $env, $matches)):
+                return trim($matches[1]);
+            endif;
+            
+            if(preg_match('/^APP_NAME=(.*)$/m', $env, $matches)):
+                $appName = trim($matches[1], '"\'');
+                return strtolower(str_replace(' ', '_', $appName));
+            endif;
+        endif;
         
-        $replacements = [
-            'DB_HOST=127.0.0.1' => 'DB_HOST=mysql',
-            'REDIS_HOST=127.0.0.1' => 'REDIS_HOST=redis',
-            'CACHE_DRIVER=file' => 'CACHE_DRIVER=redis',
-            'SESSION_DRIVER=file' => 'SESSION_DRIVER=redis',
-            'QUEUE_CONNECTION=sync' => 'QUEUE_CONNECTION=redis',
-        ];
-
-        foreach($replacements as $search => $replace):
-            $env = preg_replace('/^'.preg_quote($search, '/').'$/m', $replace, $env);
-        endforeach;
+        if($this->domain && $this->domain !== 'localhost'):
+            $parts = explode('.', $this->domain);
+            if(count($parts) >= 2):
+                array_pop($parts);
+                return strtolower(implode('_', $parts));
+            endif;
+        endif;
         
-        if (!str_contains($env, 'APP_DOMAIN=')) {
-            $env .= "\n# BasePack Configuration\n";
-            $env .= "APP_DOMAIN={$this->domain}\n";
-        }
-
-        File::put($path, $env);
+        $appName = config('app.name', 'laravel');
+        return strtolower(str_replace(' ', '_', $appName));
     }
 
     protected function updateGitignore(): void
@@ -392,13 +393,17 @@ class InstallCommand extends Command
             'storage/redis-data/',
         ];
 
+        $updated = false;
         foreach($toAdd as $line):
             if(!str_contains($content, $line)):
                 $content .= "\n" . $line;
+                $updated = true;
             endif;
         endforeach;
 
-        File::put($gitignore, $content);
-        $this->info('.gitignore updated successfully.');
+        if($updated):
+            File::put($gitignore, $content);
+            $this->info('.gitignore updated successfully.');
+        endif;
     }
 }
