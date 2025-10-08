@@ -104,16 +104,16 @@ jobs:
       run: mkdir -p reports
 
     - name: Execute Unit Tests
-      run: vendor/bin/phpunit --testsuite=Unit
+      run: vendor/bin/phpunit --testsuite=Unit --coverage-text --coverage-clover=coverage-unit.xml
 
     - name: Execute Integration Tests
-      run: vendor/bin/phpunit --testsuite=Integration
+      run: vendor/bin/phpunit --testsuite=Integration --coverage-text --coverage-clover=coverage-integration.xml
 
     - name: Execute Feature Tests
-      run: vendor/bin/phpunit --testsuite=Feature
+      run: vendor/bin/phpunit --testsuite=Feature --coverage-text --coverage-clover=coverage-feature.xml
 
     - name: Execute All Tests with Coverage
-      run: vendor/bin/phpunit
+      run: vendor/bin/phpunit --coverage-text --coverage-clover=coverage.xml
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v3
