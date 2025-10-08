@@ -385,6 +385,7 @@ class InstallCommand extends Command
 
         $content = File::get($gitignore);
         $toAdd = [
+            '# BasePack additions',
             '.docker/general/ssl/*.pem',
             '.docker/general/ssl/*.key',
             '.docker/general/ssl/*.crt',
