@@ -24,10 +24,10 @@ class BasePackServiceProvider extends ServiceProvider
     
     public function boot(): void
     {
-        if ($this->app->runningInConsole()) {
+        if($this->app->runningInConsole()):
             $this->configurePublishing();
             $this->registerCommands();
-        }
+        endif;
     }
     
     protected function configurePublishing(): void

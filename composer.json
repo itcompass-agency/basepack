@@ -1,6 +1,7 @@
 {
     "name": "itcompass/basepack",
     "description": "DevOps toolkit for Laravel projects with Docker, Make commands, and development environment setup",
+    "version": "0.0.1",
     "keywords": [
         "laravel",
         "docker",
@@ -26,9 +27,9 @@
     },
     "authors": [
         {
-            "name": "ITCompass Agency",
-            "email": "info@itcompass.agency",
-            "homepage": "https://itcompass.agency",
+            "name": "ITCompass",
+            "email": "contact@itcompass.io",
+            "homepage": "https://itcompass.io",
             "role": "Developer"
         }
     ],
@@ -60,7 +61,7 @@
             ]
         },
         "branch-alias": {
-            "dev-main": "1.0-dev"
+            "dev-main": "0.1-dev"
         }
     },
     "scripts": {
