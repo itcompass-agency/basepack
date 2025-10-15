@@ -1,0 +1,46 @@
+* text=auto
+
+# Source files
+*.php text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.xml text eol=lf
+
+# Docker files
+*.conf text eol=lf
+*.ini text eol=lf
+Dockerfile text eol=lf
+docker-compose*.yml text eol=lf
+
+# Shell scripts
+*.sh text eol=lf
+Makefile text eol=lf
+
+# Stubs
+*.stub text eol=lf
+
+# Documentation
+README.md text eol=lf
+CHANGELOG.md text eol=lf
+SECURITY.md text eol=lf
+TESTING.md text eol=lf
+LICENSE.md text eol=lf
+
+# Config files
+.gitignore text eol=lf
+.gitattributes text eol=lf
+.editorconfig text eol=lf
+phpunit.xml text eol=lf
+
+# Exclude from archives
+/.github export-ignore
+/.claude export-ignore
+/tests export-ignore
+/reports export-ignore
+/scripts export-ignore
+.gitattributes export-ignore
+.gitignore export-ignore
+phpunit.xml export-ignore
+TESTING.md export-ignore

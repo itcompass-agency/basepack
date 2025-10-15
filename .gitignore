@@ -1,10 +1,32 @@
+# Dependencies
 /vendor
 composer.lock
 /node_modules
 /package-lock.json
+
+# Testing
 .phpunit.cache
 reports/
 coverage-report/
 coverage*.xml
 coverage.txt
 .env.testing
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker (for local development)
+.docker/
+.env.docker
+docker-compose.override.yml
+
+# Makefile (generated)
+/Makefile
