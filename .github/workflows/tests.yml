@@ -105,15 +105,19 @@ jobs:
 
     - name: Execute Unit Tests
       run: vendor/bin/phpunit --testsuite=Unit --coverage-text --coverage-clover=coverage-unit.xml
+      continue-on-error: false
 
     - name: Execute Integration Tests
       run: vendor/bin/phpunit --testsuite=Integration --coverage-text --coverage-clover=coverage-integration.xml
+      continue-on-error: false
 
     - name: Execute Feature Tests
       run: vendor/bin/phpunit --testsuite=Feature --coverage-text --coverage-clover=coverage-feature.xml
+      continue-on-error: false
 
     - name: Execute All Tests with Coverage
       run: vendor/bin/phpunit --coverage-text --coverage-clover=coverage.xml
+      continue-on-error: false
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v3
