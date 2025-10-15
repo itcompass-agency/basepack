@@ -1,7 +1,6 @@
 {
     "name": "itcompass/basepack",
     "description": "DevOps toolkit for Laravel projects with Docker, Make commands, and development environment setup",
-    "version": "1.0.0",
     "keywords": [
         "laravel",
         "docker",

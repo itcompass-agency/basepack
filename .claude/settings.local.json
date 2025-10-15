@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(composer install:*)",
+      "Bash(vendor/bin/phpunit:*)",
+      "Bash(php artisan basepack:test:*)",
+      "Bash(make test-unit:*)",
+      "Bash(chmod:*)",
+      "Bash(./scripts/test-matrix.sh:*)",
+      "Bash(make test-matrix:*)",
+      "Bash(make:*)",
+      "Bash(cat:*)",
+      "Read(//Users/bigforko/Projects/test-app/**)",
+      "Bash(composer update:*)",
+      "Bash(php artisan:*)",
+      "Bash(docker-compose ps:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(docker exec:*)",
+      "Bash(docker port:*)",
+      "Bash(docker-compose down:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nRelease v1.0.0 - Initial Public Release\n\nThis is the first stable release of BasePack, a comprehensive DevOps toolkit for Laravel projects.\n\n## Major Features:\n- Complete Docker-based development and production environment\n- 9 powerful Artisan commands for DevOps automation\n- Smart SSL certificate detection and management\n- Comprehensive Makefile with 30+ commands\n- Real-time container monitoring dashboard\n- Auto-fix diagnostic capabilities\n\n## Security (CVE-2025-49844 Mitigation):\n- Redis security hardening with password authentication\n- Network isolation (no public port exposure)\n- Disabled dangerous commands (FLUSHDB, FLUSHALL, CONFIG, SHUTDOWN, DEBUG)\n- Updated to Redis 7.4-alpine with latest security patches\n- Protected mode enabled\n- Comprehensive security documentation\n\n## Documentation:\n- Professional README.md with complete installation guide\n- SECURITY.md with vulnerability reporting process\n- CONTRIBUTING.md with development guidelines\n- CHANGELOG.md for version tracking\n- TESTING.md explaining test architecture\n\n## Tested Against:\n- PHP 8.1, 8.2, 8.3\n- Laravel 10.x, 11.x, 12.x\n- 47 tests, 181 assertions - all passing\n\n## Credits:\nCreated by ITCompass (https://itcompass.io)\nLead Developer: Artem Shevchenko (@ibigforko)\n\n🤖 Generated with Claude Code (https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git tag -a v1.0.0 -m \"$(cat <<''EOF''\nBasePack v1.0.0 - Initial Public Release\n\n🎉 First stable release of BasePack DevOps Toolkit\n\n## Highlights:\n✅ Complete Docker environment for Laravel (dev & prod)\n✅ 9 powerful Artisan commands\n✅ Redis security hardening (CVE-2025-49844)\n✅ Smart SSL management\n✅ 30+ Makefile commands\n✅ Real-time monitoring dashboard\n✅ Comprehensive documentation\n✅ 47 tests passing across PHP 8.1-8.3 & Laravel 10-12\n\n## Security:\n🔒 Redis password authentication required\n🔒 Network isolation (no public exposure)\n🔒 Dangerous commands disabled\n🔒 Redis 7.4-alpine with latest patches\n\nCreated by ITCompass (https://itcompass.io)\nDeveloper: Artem Shevchenko (@ibigforko)\nEOF\n)\")",
+      "Bash(git tag:*)",
+      "Bash(git describe:*)",
+      "Bash(/dev/null)",
+      "Bash(echo:*)",
+      "Bash(git commit:*)",
+      "Bash(composer validate:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
