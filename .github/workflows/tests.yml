@@ -85,7 +85,7 @@ jobs:
       with:
         php-version: ${{ matrix.php }}
         extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick
-        coverage: pcov
+        coverage: none
 
     - name: Setup problem matchers
       run: |
@@ -104,28 +104,16 @@ jobs:
       run: mkdir -p reports
 
     - name: Execute Unit Tests
-      run: vendor/bin/phpunit --testsuite=Unit --coverage-text --coverage-clover=coverage-unit.xml
-      continue-on-error: false
+      run: vendor/bin/phpunit --testsuite=Unit
 
     - name: Execute Integration Tests
-      run: vendor/bin/phpunit --testsuite=Integration --coverage-text --coverage-clover=coverage-integration.xml
-      continue-on-error: false
+      run: vendor/bin/phpunit --testsuite=Integration
 
     - name: Execute Feature Tests
-      run: vendor/bin/phpunit --testsuite=Feature --coverage-text --coverage-clover=coverage-feature.xml
-      continue-on-error: false
+      run: vendor/bin/phpunit --testsuite=Feature
 
-    - name: Execute All Tests with Coverage
-      run: vendor/bin/phpunit --coverage-text --coverage-clover=coverage.xml
-      continue-on-error: false
-
-    - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
+    - name: Execute All Tests
+      run: vendor/bin/phpunit
 
   code-quality:
     runs-on: ubuntu-latest
