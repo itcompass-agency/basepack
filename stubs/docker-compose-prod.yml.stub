@@ -77,14 +77,24 @@ services:
 
   redis:
     container_name: {{PROJECT_NAME}}-redis
-    image: redis:alpine
-    ports:
-      - "${REDIS_OUTER_PORT}:6379"
+    image: redis:7.4-alpine
+    # SECURITY: Redis should NOT be exposed publicly in production
     networks:
       - network
     volumes:
       - redis-data:/data
-    command: redis-server --appendonly yes
+      - ./.docker/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: >
+      redis-server /usr/local/etc/redis/redis.conf
+      --requirepass ${REDIS_PASSWORD}
+      --appendonly yes
+      --replica-read-only no
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
 volumes:
   mysql-data:

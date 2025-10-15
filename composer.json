@@ -1,7 +1,7 @@
 {
     "name": "itcompass/basepack",
     "description": "DevOps toolkit for Laravel projects with Docker, Make commands, and development environment setup",
-    "version": "0.0.1",
+    "version": "1.0.0",
     "keywords": [
         "laravel",
         "docker",
@@ -19,17 +19,24 @@
     ],
     "type": "library",
     "license": "MIT",
-    "homepage": "https://github.com/itcompass-agency/basepack",
+    "homepage": "https://github.com/ibigforko/basepack",
     "support": {
-        "issues": "https://github.com/itcompass-agency/basepack/issues",
-        "source": "https://github.com/itcompass-agency/basepack",
-        "docs": "https://github.com/itcompass-agency/basepack/wiki"
+        "issues": "https://github.com/ibigforko/basepack/issues",
+        "source": "https://github.com/ibigforko/basepack",
+        "docs": "https://github.com/ibigforko/basepack#readme",
+        "email": "contact@itcompass.io"
     },
     "authors": [
         {
             "name": "ITCompass",
             "email": "contact@itcompass.io",
             "homepage": "https://itcompass.io",
+            "role": "Company"
+        },
+        {
+            "name": "Artem Shevchenko",
+            "email": "contact@itcompass.io",
+            "homepage": "https://github.com/ibigforko",
             "role": "Developer"
         }
     ],
